@@ -4,17 +4,24 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.InputFilter;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-/** Pantalla de una cuenta: desglose completo, reinicios, color, reiniciar y borrar. */
+/** Pantalla de una cuenta: desglose completo, reinicios, nombre, color, reiniciar y borrar. */
 public class DetalleActivity extends Activity {
 
     public static final String EXTRA_ID = "id";
+
+    private static final String ESTADO_EDITANDO = "editando";
 
     private static final String[] ETIQUETAS = {"AÑOS", "MESES", "DÍAS", "HORAS", "MINUTOS", "SEGUNDOS"};
 
@@ -24,7 +31,9 @@ public class DetalleActivity extends Activity {
 
     private View franja, punto;
     private TextView nombre, desde, numReinicios, palabraReinicios, notaReinicios;
-    private TextView totalDias, totalHorasMin, totalSegundos, textoConfirmar;
+    private TextView totalDias, totalHorasMin, totalSegundos, textoConfirmar, errorNombre;
+    private EditText campoNombre;
+    private LinearLayout cabecera, editorNombre;
     private final TextView[] celdas = new TextView[6];
     private LinearLayout acciones, confirmar;
     private Button botonSi;
@@ -65,12 +74,50 @@ public class DetalleActivity extends Activity {
         c.setPadding(g, Ui.dp(this, 20), g, Ui.dp(this, 24));
 
         // Título
-        LinearLayout cabecera = Ui.fila(this);
+        cabecera = Ui.fila(this);
         punto = Ui.punto(this, p.texto, 16);
         cabecera.addView(punto);
         nombre = Ui.texto(this, "", 26, p.texto, true);
+        nombre.setOnClickListener(v -> editarNombre());
         cabecera.addView(nombre, Ui.conMargenes(Ui.peso(1), this, 10, 0, 0, 0));
+        TextView editar = Ui.texto(this, "Editar", 14, p.gris, true);
+        editar.setPadding(Ui.dp(this, 10), Ui.dp(this, 8), 0, Ui.dp(this, 8));
+        editar.setOnClickListener(v -> editarNombre());
+        cabecera.addView(editar);
         c.addView(cabecera);
+
+        // Editor del nombre (reemplaza al título mientras se muestra)
+        editorNombre = Ui.columna(this);
+        campoNombre = new EditText(this);
+        campoNombre.setId(1002); // con id fijo, Android conserva lo escrito al girar el teléfono
+        campoNombre.setSingleLine(true);
+        campoNombre.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        campoNombre.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        campoNombre.setFilters(new InputFilter[] {new InputFilter.LengthFilter(60)});
+        campoNombre.setHint("Nombre de la cuenta");
+        campoNombre.setTextColor(p.texto);
+        campoNombre.setHintTextColor(p.gris);
+        campoNombre.setBackground(Ui.forma(this, p.celda, p.linea, 1, 10));
+        campoNombre.setPadding(Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 14), Ui.dp(this, 12));
+        campoNombre.setOnEditorActionListener((v, accion, evento) -> {
+            if (accion != EditorInfo.IME_ACTION_DONE) return false;
+            guardarNombre();
+            return true;
+        });
+        editorNombre.addView(campoNombre, Ui.lp(Ui.MATCH, Ui.WRAP));
+        errorNombre = Ui.texto(this, "Escribí un nombre para la cuenta.", 13, p.texto, false);
+        errorNombre.setVisibility(View.GONE);
+        editorNombre.addView(errorNombre, Ui.conMargenes(Ui.lp(Ui.MATCH, Ui.WRAP), this, 0, 6, 0, 0));
+        LinearLayout cancelarGuardar = Ui.fila(this);
+        Button cancelar = Ui.boton(this, p, "Cancelar", false);
+        cancelar.setOnClickListener(v -> cerrarEditorNombre());
+        cancelarGuardar.addView(cancelar, Ui.conMargenes(Ui.peso(1), this, 0, 0, 10, 0));
+        Button guardar = Ui.boton(this, p, "Guardar", true);
+        guardar.setOnClickListener(v -> guardarNombre());
+        cancelarGuardar.addView(guardar, Ui.peso(1));
+        editorNombre.addView(cancelarGuardar, Ui.conMargenes(Ui.lp(Ui.MATCH, Ui.WRAP), this, 0, 10, 0, 0));
+        editorNombre.setVisibility(View.GONE);
+        c.addView(editorNombre, Ui.lp(Ui.MATCH, Ui.WRAP));
         desde = Ui.texto(this, "", 14, p.gris, false);
         c.addView(desde, Ui.conMargenes(Ui.lp(Ui.MATCH, Ui.WRAP), this, 0, 4, 0, 16));
 
@@ -161,6 +208,17 @@ public class DetalleActivity extends Activity {
         raiz.addView(scroll, Ui.lp(Ui.MATCH, Ui.MATCH));
         setContentView(raiz);
         mostrar(System.currentTimeMillis());
+        if (savedInstanceState != null && savedInstanceState.getBoolean(ESTADO_EDITANDO)) {
+            // Lo escrito lo restaura Android solo; acá se vuelve a abrir el editor
+            cabecera.setVisibility(View.GONE);
+            editorNombre.setVisibility(View.VISIBLE);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (editorNombre != null) outState.putBoolean(ESTADO_EDITANDO, editorNombre.getVisibility() == View.VISIBLE);
     }
 
     @Override
@@ -196,6 +254,38 @@ public class DetalleActivity extends Activity {
         totalDias.setText("En total: " + Tiempo.numero(sec / 86_400) + " días");
         totalHorasMin.setText(Tiempo.numero(sec / 3_600) + " horas · " + Tiempo.numero(sec / 60) + " minutos");
         totalSegundos.setText(Tiempo.numero(sec) + " segundos");
+    }
+
+    private void editarNombre() {
+        campoNombre.setText(cuenta.nombre);
+        campoNombre.setSelection(campoNombre.length());
+        errorNombre.setVisibility(View.GONE);
+        cabecera.setVisibility(View.GONE);
+        editorNombre.setVisibility(View.VISIBLE);
+        campoNombre.requestFocus();
+        teclado().showSoftInput(campoNombre, InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    private void guardarNombre() {
+        String n = campoNombre.getText().toString().trim();
+        if (n.isEmpty()) {
+            errorNombre.setVisibility(View.VISIBLE);
+            return;
+        }
+        store.renombrar(cuenta.id, n);
+        cerrarEditorNombre();
+        mostrar(System.currentTimeMillis());
+    }
+
+    private void cerrarEditorNombre() {
+        teclado().hideSoftInputFromWindow(campoNombre.getWindowToken(), 0);
+        campoNombre.clearFocus();
+        editorNombre.setVisibility(View.GONE);
+        cabecera.setVisibility(View.VISIBLE);
+    }
+
+    private InputMethodManager teclado() {
+        return (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
     }
 
     private void preguntar(String accion) {

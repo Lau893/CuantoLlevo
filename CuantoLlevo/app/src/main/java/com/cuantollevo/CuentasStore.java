@@ -59,6 +59,13 @@ public final class CuentasStore {
         guardar();
     }
 
+    public void renombrar(String id, String nombre) {
+        Cuenta c = buscar(id);
+        if (c == null) return;
+        c.nombre = nombre;
+        guardar();
+    }
+
     public void cambiarColor(String id, String color) {
         Cuenta c = buscar(id);
         if (c == null) return;
