@@ -23,9 +23,9 @@ El APK queda en `app\build\outputs\apk\debug\app-debug.apk`. Pasalo al celular (
 
 ## Pantallas (una Activity cada una)
 
-- `MainActivity`: la lista de cuentas con el contador en vivo y el botón "+ Nueva cuenta".
+- `MainActivity`: la lista de cuentas con el contador en vivo, el modo "Ordenar" (↑ ↓) y el botón "+ Nueva cuenta".
 - `NuevaCuentaActivity`: nombre, color y, opcionalmente, fecha y hora de inicio.
-- `DetalleActivity`: desglose completo, reinicios, totales, cambio de color, reiniciar y borrar.
+- `DetalleActivity`: desglose compacto, reinicios, totales, editar nombre, cambio de color, detener/retomar, reiniciar (a cero o desde una fecha) y borrar.
 
 ## Resto del código
 

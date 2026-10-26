@@ -183,7 +183,9 @@ public class NuevaCuentaActivity extends Activity {
                 empezoAntes.isChecked() ? inicio : ahora,
                 ahora,
                 0,
-                selector.getSeleccionado()));
+                selector.getSeleccionado(),
+                0,
+                0));
         finish();
     }
 

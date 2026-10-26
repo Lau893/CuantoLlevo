@@ -11,11 +11,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** Guarda las cuentas en el teléfono (SharedPreferences, como JSON). Una sola instancia para toda la app. */
+/**
+ * Guarda las cuentas en el teléfono (SharedPreferences, como JSON). Una sola instancia para toda la app.
+ * Las cuentas se guardan en el orden en que se muestran.
+ */
 public final class CuentasStore {
 
     private static final String PREFS = "cuanto_llevo";
     private static final String KEY = "cuentas";
+    /** Antes el orden era siempre "la más nueva primero"; esta marca indica que ya se guardó en el JSON. */
+    private static final String KEY_ORDEN = "orden_guardado";
 
     private static CuentasStore instancia;
 
@@ -32,11 +37,9 @@ public final class CuentasStore {
         cargar();
     }
 
-    /** Las cuentas, la más nueva primero. */
+    /** Las cuentas, en el orden elegido. */
     public List<Cuenta> todas() {
-        List<Cuenta> copia = new ArrayList<>(cuentas);
-        Collections.sort(copia, (a, b) -> Long.compare(b.creada, a.creada));
-        return copia;
+        return new ArrayList<>(cuentas);
     }
 
     public Cuenta buscar(String id) {
@@ -54,8 +57,20 @@ public final class CuentasStore {
         return cuentas.size();
     }
 
+    /** Las nuevas van arriba de todo. */
     public void agregar(Cuenta c) {
-        cuentas.add(c);
+        cuentas.add(0, c);
+        guardar();
+    }
+
+    /** Sube (-1) o baja (+1) una cuenta un lugar en la lista. */
+    public void mover(String id, int direccion) {
+        Cuenta c = buscar(id);
+        if (c == null) return;
+        int i = cuentas.indexOf(c);
+        int j = i + direccion;
+        if (j < 0 || j >= cuentas.size()) return;
+        Collections.swap(cuentas, i, j);
         guardar();
     }
 
@@ -73,10 +88,32 @@ public final class CuentasStore {
         guardar();
     }
 
+    public void detener(String id) {
+        Cuenta c = buscar(id);
+        if (c == null || c.detenida()) return;
+        c.detenidaEn = System.currentTimeMillis();
+        guardar();
+    }
+
+    public void retomar(String id) {
+        Cuenta c = buscar(id);
+        if (c == null || !c.detenida()) return;
+        c.pausado += Math.max(0L, System.currentTimeMillis() - c.detenidaEn);
+        c.detenidaEn = 0;
+        guardar();
+    }
+
     public void reiniciar(String id) {
+        reiniciarDesde(id, System.currentTimeMillis());
+    }
+
+    /** Vuelve a contar desde {@code desde} (corriendo, sin pausas) y suma un reinicio. */
+    public void reiniciarDesde(String id, long desde) {
         Cuenta c = buscar(id);
         if (c == null) return;
-        c.inicio = System.currentTimeMillis();
+        c.inicio = desde;
+        c.pausado = 0;
+        c.detenidaEn = 0;
         c.reinicios++;
         guardar();
     }
@@ -101,10 +138,17 @@ public final class CuentasStore {
                         o.getLong("inicio"),
                         o.getLong("creada"),
                         o.optInt("reinicios", 0),
-                        o.optString("color", "")));
+                        o.optString("color", ""),
+                        o.optLong("pausado", 0),
+                        o.optLong("detenidaEn", 0)));
             }
         } catch (JSONException e) {
             cuentas.clear();
+            return;
+        }
+        if (!prefs.getBoolean(KEY_ORDEN, false)) {
+            Collections.sort(cuentas, (a, b) -> Long.compare(b.creada, a.creada));
+            guardar();
         }
     }
 
@@ -118,11 +162,13 @@ public final class CuentasStore {
                         .put("inicio", c.inicio)
                         .put("creada", c.creada)
                         .put("reinicios", c.reinicios)
-                        .put("color", c.color));
+                        .put("color", c.color)
+                        .put("pausado", c.pausado)
+                        .put("detenidaEn", c.detenidaEn));
             }
         } catch (JSONException e) {
             return;
         }
-        prefs.edit().putString(KEY, arr.toString()).apply();
+        prefs.edit().putString(KEY, arr.toString()).putBoolean(KEY_ORDEN, true).apply();
     }
 }
