@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.CuantoLlevo" parent="Theme.CuantoLlevo.Oscuro" />
+</resources>

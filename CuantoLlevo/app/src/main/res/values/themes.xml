@@ -1,0 +1,27 @@
+<resources>
+    <!-- Gris/negro en todos los controles del sistema (casillas, calendario, reloj). -->
+    <style name="Theme.CuantoLlevo.Claro" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FFF2F2F2</item>
+        <item name="android:colorPrimary">#FF111111</item>
+        <item name="android:colorPrimaryDark">#FFFFFFFF</item>
+        <item name="android:colorAccent">#FF111111</item>
+        <item name="android:colorControlNormal">#FF666666</item>
+        <item name="android:textColorPrimary">#FF111111</item>
+        <item name="android:textColorSecondary">#FF666666</item>
+        <item name="android:textColorHint">#FF999999</item>
+    </style>
+
+    <style name="Theme.CuantoLlevo.Oscuro" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FF0C0C0C</item>
+        <item name="android:colorPrimary">#FFF2F2F2</item>
+        <item name="android:colorPrimaryDark">#FF1A1A1A</item>
+        <item name="android:colorAccent">#FFF2F2F2</item>
+        <item name="android:colorControlNormal">#FF9A9A9A</item>
+        <item name="android:textColorPrimary">#FFF2F2F2</item>
+        <item name="android:textColorSecondary">#FF9A9A9A</item>
+        <item name="android:textColorHint">#FF6A6A6A</item>
+    </style>
+
+    <!-- El del manifiesto sigue al sistema; cada pantalla lo cambia según el modo elegido (Paleta.aplicarTema). -->
+    <style name="Theme.CuantoLlevo" parent="Theme.CuantoLlevo.Claro" />
+</resources>
